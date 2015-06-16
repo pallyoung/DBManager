@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>demo</title>
+	<style>
+		*{margin: 0;padding: 0;font-size: 0.625em;line-height: 2em}
+	</style>
+</head>
+<body>
+	<div id="log">
+		
+	</div>
+	<script>
+		function log(msg) {
+			console.log(msg);
+			document.querySelector("#log").innerHTML += ("<p>" + new Date().toLocaleString() + ":" + msg + "</p>");
+		}
+
+		var r = indexedDB.deleteDatabase("TEST");
+		r.onsuccess = cb;
+		r.onerror = cb;
+
+		function cb(e) {
+			log("删除数据库操作"+e.type);
+			var r = indexedDB.open("TEST");
+			r.onupgradeneeded = function(e){
+				log(e.type+"handle");
+
+				var db = e.target.result;
+				log("createObjectStore---User");
+				var os = db.createObjectStore("User",{
+					keyPath:"id",
+					autoIncrement:false
+				});
+				log("createIndex---name");
+				os.createIndex("name","name",{unique:false});
+				log("createIndex---age");
+				os.createIndex("age","age",{unique:false});
+
+				log("createObjectStore完成，创建的os信息如下：");
+				log("name:"+os.name);
+				log("keyPath:"+os.keyPath);
+				var indexNames = os.indexNames;
+				log("indexNames:"+JSON.stringify(indexNames));
+
+
+			}
+			r.onsuccess = function(e){
+				log(e.type+"handle");
+				var db = e.target.result;
+
+				var users = [
+					{	
+						id:0,
+						name:"Bruce",
+						age:40
+					},
+					{
+						id:1,
+						name:"Gary",
+						age:22
+					},
+					{
+						id:2,
+						name:"Lucy",
+						age:21
+					},
+					{
+						id:3,
+						name:"Jim",
+						age:22
+					}
+				]
+
+				var tx = db.transaction(db.objectStoreNames,"readwrite");
+				tx.oncomplete = function(){
+					log("所有的事务都已经完成");
+					log("关闭数据库");
+					db.close();
+				}
+				tx.onerror = function(e){
+					log("异常操作，原因是："+e.target.error.message);
+					db.close();
+				}
+				tx.onabort = function(){
+					log("transaction abort");
+					log("关闭数据库");
+					db.close();
+				}
+				var os = tx.objectStore("User");
+				var rs = [];
+				log("向os中插入数据");
+				for(var i=0;i<users.length;i++){
+					r[i] = os.put(users[i]);
+					r[i].onsuccess = (function(i){
+										return function(e){
+											log("第"+(i+1)+"条数据插入成功");
+										}
+									})(i);
+				}
+				log("现在开始删除数据,删除操作会在所有put事务完成之后进行");
+				log("删除id为3的user");
+				r[4] = os.delete(3);
+				r[4].onsuccess = function(e){
+					log("删除id为3的user成功");
+				}
+				r[5] = os.count();
+				r[5].onsuccess = function(e){
+					log("现在os中一共有"+e.target.result+"条数据");
+					log("接下来用游标查询数据，并把每个user的name打印出来");
+				}
+
+				os.openCursor().onsuccess=function(e){
+					var cursor=e.target.result;
+					if(cursor){
+						log(cursor.value.name);
+						cursor.continue();
+					}else{
+						log("使用游标查询数据结束，接下来会用index打开一个游标去查询数据");
+						var index = os.index("age");
+						index.openCursor(IDBKeyRange.upperBound(22,true)).onsuccess = function(e){
+							var cursor=e.target.result;
+							if(cursor){
+								log(cursor.value.name);
+								cursor.continue();
+							}else{
+								log("上面是年纪小于22岁的人的名字");
+								log("清空os");
+								os.clear().onsuccess = function(e){
+									log("清空os成功");
+									os.count().onsuccess = function(e){
+										log("现在os中一共有"+e.target.result+"条数据");
+									}
+								};
+							}
+						}
+					}
+				}
+
+				
+
+			}
+			r.onerror = function(e){
+
+			}
+		}
+	
+	</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>library</title>
+	<script src="../lib/DBManager.js"></script>
+</head>
+<body>
+	<table id="list">
+		
+	</table>
+	<p id="addbook">
+		<input type="text" placeholder="作者">
+		<input type="text" placeholder="书名">
+		<input type="text" placeholder="ISBN">
+		<a href="javascript:void(0)" onclick="add()">添加</a>
+	</p>
+	<script>
+		//DBM.deleteDataBase("TEST",function(){});
+		var dbm=new DBM("TEST");
+		dbm.contains("library").then(function(data){
+			if(!data.result){
+				dbm.createObjectStore("library","ISBN",false,[{
+					name:"name",
+					keyPath:"name",
+					optional:{
+						unique:true
+					}},
+					{
+						name:"author",
+						keyPath:"author",
+						optional:{
+							unique:false
+						}
+					}]);
+				console.log(dbm._depth);
+			}
+		},function(data){
+			console.log(data.message);
+		}).then(
+		function(){
+			showBooks();
+		},function(data){
+			console.log(dbm._reason);
+			console.log(data.message);
+		});
+		function add () {
+			var inputs=document.querySelectorAll("#addbook input");
+			var book={
+				author:inputs[0].value,
+				name:inputs[1].value,
+				ISBN:inputs[2].value
+			}
+			inputs[0].value="";
+			inputs[1].value="";
+			inputs[2].value="";
+
+			dbm.put("library",[book]).then(function(){
+				showBooks();
+			},function(){});
+		}
+		function showBooks(){
+			var list=document.querySelector("#list");
+			var html=[];
+			html.push("<tr><th>作者</th><th>书名</th><th>ISBN</th></tr>");
+			dbm.query("library").then(function(data){
+				if(data.type==="success"){
+					for(var i=0;i<data.result.length;i++){
+						html.push("<tr><td>"+data.result[i].author+"</td><td>"+
+							data.result[i].name+"</td><td>"+
+							data.result[i].ISBN+"</td></tr>");
+					}
+
+				}
+				list.innerHTML=html.join("");
+			});
+		}
+	</script>
+</body>
+</html>

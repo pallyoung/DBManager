@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>test cursor</title>
+</head>
+<body>
+	<script>
+		var dr = indexedDB.deleteDatabase("TEST");
+		var r;
+		dr.onsuccess = test;
+		dr.onerror = test;
+		function test(e) {
+			console.log(e.type);
+			r = indexedDB.open("TEST");
+			r.onupgradeneeded = function(e) {
+				var db = e.target.result;
+				//创建os
+				var os = db.createObjectStore("User", {
+					keyPath: "id",
+					autoIncrement: true
+				});
+
+				//创建索引
+				os.createIndex("by_name", "name", {
+					unique: false
+				});
+				os.createIndex("address", "address", {
+					unique: true
+				});
+				os.createIndex("age", "age", {
+					unique: false
+				});
+
+
+
+			};
+			r.onsuccess = function(e) {
+				var db = e.target.result;
+				var users = [{
+					name: "Bruce",
+					address: "No.2,ST",
+					age: "22"
+				}, {
+					name: "Bruce",
+					address: "No.1,ST",
+					age: "22"
+				}, {
+					name: "Lee",
+					address: "No.2,LA",
+					age: "18"
+				}];
+				var tx = db.transaction(["User"], "readwrite");
+				var os = tx.objectStore("User");
+				tx.onabort = function(e) {
+						console.log(e.type + "---" + e.target.db.name);
+					}
+				tx.onerror = function(e) {
+						console.log(e.type + "---" + e.target.error.message);
+					}
+				tx.oncomplete = function(e) {
+					console.log(e.type + "---" + e.target.db.name);
+
+				}
+				for (var i = users.length - 1; i >= 0; i--) {
+					 os.add(users[i]);
+				}
+				var cursorRequest=os.openCursor();
+				cursorRequest.onsuccess=function(e){
+					var cursor = event.target.result;
+					if(cursor){
+						console.log(cursor.value.name);
+						cursor.continue();
+					}else{
+						db.close();
+					}
+				}
+			};
+			r.onerror = function(e) {
+				console.log(e.type + "---" + e.target.error.message);
+			}
+		}
+	</script>
+</body>
+</html>

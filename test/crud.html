@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>test crud</title>
+</head>
+<body>
+	<script>
+		//清除上次测试数据
+		var dr = indexedDB.deleteDatabase("TEST");
+		var r;
+		dr.onsuccess = test;
+		dr.onerror = test;
+		function test(e) {
+			console.log(e.type);
+			r = indexedDB.open("TEST");
+			r.onupgradeneeded = function(e) {
+				var db = e.target.result;
+				//创建os
+				var os = db.createObjectStore("User", {
+					keyPath: "id",
+					autoIncrement: true
+				});
+
+				//创建索引
+				os.createIndex("by_name", "name", {
+					unique: false
+				});
+				os.createIndex("address", "address", {
+					unique: true
+				});
+				os.createIndex("age", "age", {
+					unique: false
+				});
+
+				//添加数据
+				os.put({
+					name: "Andy",
+					address: "No.1,LA",
+					age: "11"
+				});
+
+
+
+			};
+			r.onsuccess = function(e) {
+				var db = e.target.result;
+				var users = [{
+					name: "Bruce",
+					address: "No.2,ST",
+					age: "22"
+				}, {
+					name: "Bruce",
+					address: "No.1,ST",
+					age: "22"
+				}, {
+					name: "Lee",
+					address: "No.2,LA",
+					age: "18"
+				}];
+				var tx = db.transaction(["User"], "readwrite");
+				var os = tx.objectStore("User");
+				var r = [];
+
+				//手动调用abort方法的时候会触发
+				//中间若是有某个操作引起error事件也会触发abort事件
+				tx.onabort = function(e) {
+						//这里居然是用e.target.db去访问数据库
+						console.log(e.type + "---" + e.target.db.name);
+					}
+					//发生错误的时候触发
+				tx.onerror = function(e) {
+						console.log(e.type + "---" + e.target.error.message);
+					}
+					//所有请求都完成的时候触发complete事件
+				tx.oncomplete = function(e) {
+					console.log(e.type + "---" + e.target.db.name);
+
+
+				}
+
+				for (var i = users.length - 1; i >= 0; i--) {
+					try {
+						//增加数据
+						r[0] = os.add(users[i]);
+						if (i == -1) {
+							//abort之后，再在该事务下进行任何操作均会抛出异常,并且之前进行的操作会被回滚
+							//每回滚一条数据都会触发一次error事件
+							tx.abort();
+						}
+					} catch (e) {
+						console.log(e.message);
+					}
+				}
+
+				//用add添加重复的数据会触发error事件之后再触发abort事件
+				//os.add(users[1]);
+
+				//使用put则会覆盖之前存在的数据
+				/*
+				*这里因为是通过keyPath去查找
+				*而keyPath是自增长的
+				*因此所有插入的数据都认为是新数据
+				*插入的新数据不满足address的唯一性
+				*所以也会报错
+				*/
+
+				//os.put(users[1]);
+				//get获取一条数据
+				os.get(2);
+				//获取一条不存在的数据并不会引发异常，只是e.target.result为undefined
+				os.get(5);
+
+				//delete删除数据,删除一条不存在的数据不会引发异常
+				os.delete(1);
+				os.delete(1);
+				db.close();
+				//delete,put,get和add方法都是异步执行的，方法会返回一个request，通过监听success和error来获取执行结果
+				//在一次事务中任何的异常发生都会触发abort事件，导致之前操作被回滚
+
+			};
+			r.onerror = function(e) {
+				console.log(e.type + "---" + e.target.error.message);
+			}
+		}
+	</script>
+</body>
+</html>

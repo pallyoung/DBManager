@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>create objectStore</title>
+</head>
+<body>
+	<script>
+		//清除上次测试数据
+		indexedDB.deleteDatabase("TEST");
+		var r=indexedDB.open("TEST");
+		r.onupgradeneeded=function (e) {
+			var db=e.target.result;
+			//判断是否存在
+			if(db.objectStoreNames.contains("User")){
+				return;
+			}
+			//创建os
+			var os=db.createObjectStore("User",{
+				keyPath:"id",
+				autoIncrement:true
+			});
+
+			//创建索引
+			os.createIndex("by_name","name",{unique:false,multiEntry:true});
+			os.createIndex("address","address",{unique:true,multiEntry:false});
+			os.createIndex("age","age",{unique:false});
+
+			os.put({
+				name:["Andy","Blue"],
+				address:["LA","ST"],
+				age:"11"
+			});
+
+			try{
+				//创建key值相同的所以将会抛出异常
+				os.createIndex("age","age",{unique:false});
+			}catch(e){
+				console.log(e.message);
+			}
+			
+			//删除索引
+			os.deleteIndex("age");
+
+			//删除空的索引将会抛出异常
+			try{
+				os.deleteIndex("age");
+			}catch(e){
+				console.log(e.message);
+			}
+
+			//删除创建的os
+			db.deleteObjectStore("User");
+			db.deleteObjectStore("User");
+
+			try{
+				//在空的os上创建索引会抛出异常
+				os.createIndex("age","age",{unique:false});
+			}catch(e){
+				console.log(e.message);
+			}
+			
+		};
+		r.onsuccess=function (e) {
+			console.log(e.type+"---"+e.target.result.version);
+			e.target.result.close();
+		};
+		r.onerror=function(e){
+			console.log(e.type+"---"+e.target.error.message);
+		}
+		/*
+		IDBObjectStore.createIndex
+
+			The createIndex() method of the IDBObjectStore interface creates and returns a new IDBIndex object in the connected database.
+			Note that this method must be called only from a VersionChange transaction mode callback.
+
+		Returns
+
+			An IDBIndex object: the newly created index.
+
+		Exceptions
+
+		This method may raise a DOMException with a DOMError of one of the following types:
+
+			Exception			Description
+			InvalidStateError	The IDBObjectStore has been deleted or removed or the method was not called from a versionchange transaction mode callback.
+			ConstraintError		An index with the same name (case-sensitive) already exists in the database
+
+		Parameters
+
+		indexName
+			The name of the index to create.
+		keyPath
+			The key path for the index to use.
+		optionalParameters
+			The IDBIndexParameters object — whose attributes are optional parameters to the method — can include the following properties:
+
+		Attribute	Description
+		unique		If true, the index will not allow duplicate values for a single key.
+		multiEntry	If true, the index will add an entry in the index for each array element when the keypath resolves to an Array. If false, it will add one single entry containing the Array.
+*/
+</script>
+</body>
+</html>

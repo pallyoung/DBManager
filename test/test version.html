@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>传入非法的version会引发异常</title>
+</head>
+<body>
+	<script>
+		//清除上次测试数据
+		indexedDB.deleteDatabase("TEST");
+		var r=indexedDB.open("TEST");
+		//添加事件监听
+		r.onupgradeneeded=function (e) {
+			console.log(e.type+"---"+e.target.result.version);
+		};
+		r.onsuccess=function (e) {
+			console.log(e.type+"---"+e.target.result.version);
+			e.target.result.close();
+		};
+		r.onerror=function (e) {
+			console.log(e.type+"---"+e.target.error.message);
+		};
+		//升级版本号
+		r=indexedDB.open("TEST",3);
+		r.onupgradeneeded=function (e) {
+			console.log(e.type+"---"+e.target.result.version);
+		};
+		r.onsuccess=function (e) {
+			console.log(e.type+"---"+e.target.result.version);
+			e.target.result.close();
+		};
+		r.onerror=function (e) {
+			console.log(e.type+"---"+e.target.error.message);
+		};
+		//直接抛出异常
+		try{
+			r=indexedDB.open("TEST",-1);
+		}catch(e){
+			console.log(e.message);
+		}
+		
+		//触发error事件
+		r=indexedDB.open("TEST",1);
+		r.onupgradeneeded=function (e) {
+			console.log(e.type+"---"+e.target.result.version);
+		};
+		r.onsuccess=function (e) {
+			console.log(e.type+"---"+e.target.result.version);
+			e.target.result.close();
+		};
+		r.onerror=function (e) {
+			console.log(e.type+"---"+e.target.error.message);
+		};
+	</script>
+</body>
+</html>

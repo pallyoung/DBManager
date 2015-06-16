@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>use indexeddb to save blob</title>
+	<script src="../lib/DBManager.js"></script>
+</head>
+<body>
+	<p>
+	<input type="file">
+	<a href="javascript:void(0)" onclick="save()">保存</a>
+	</p>
+
+	<table id="list"></table>
+	<div id="result"></div>
+	<script>
+		var dbm=new DBM("TEST");
+
+		dbm.exec({
+			operation:"open",
+			version:Date.now(),
+			callback:function(data){
+				if(data.type==="success"&&(!data.result.objectStoreNames.contains("blob"))){
+					dbm.exec({
+						operation:'createObjectStore',
+						objectStore:"blob",
+						keyPath:{
+							name:"index",
+							autoIncrement:true,
+						},
+						index:[{
+							name:"name",
+							keyPath:"name",
+							optional:{
+								unique:false
+							}
+						}],
+						callback:function(){
+							show();
+						}
+					});
+				}else{
+					show();
+				}
+			}
+		});
+		function save () {
+			var file=document.querySelector("input[type='file']");
+			
+			var fs=file.files[0];
+			console.log(fs);
+			if(fs){
+				var blob={
+					name:fs.name,
+					type:fs.type,
+					size:fs.size,
+					lastModified:fs.lastModified,
+					lastModifiedDate:fs.lastModifiedDate,
+					blob:fs
+				}
+				dbm.exec({
+					operation:"put",
+					objectStore:"blob",
+					data:[blob],
+					callback:function(){
+						show();
+					}
+				});
+			}
+			
+
+		}
+		function show(){
+
+			var html=[];
+			html.push("<tr><th>name</th><th>size</th><th>type</th></tr>");
+			dbm.exec({
+				operation:"query",
+				objectStore:"blob",
+				callback:function(data){
+					for(var i=0;i<data.result.length;i++){
+						html.push("<tr><th data-index='"+data.result[i].index+"'>"+data.result[i].name+"</th><th data-index='"+data.result[i].index+"'>"+data.result[i].size+"</th><th data-index='"+data.result[i].index+"'>"+data.result[i].type+"</th></tr>");
+
+					}
+					readFile(data.result[0].blob);
+					document.querySelector("#list").innerHTML=html.join("");
+				}
+			});
+		}
+		function readFile(blob){
+			var fr=new FileReader();
+			var type;
+			var result=document.querySelector("#result");
+			if (/image/.test(blob.type)){
+				fr.readAsDataURL(blob);
+				type="img";
+			} else {
+				fr.readAsText(blob);
+				type="text";
+			}
+			fr.onload=function(){
+				if(type==="img"){
+					result.innerHTML="<img src='"+fr.result+"'/>"
+				}else if(type==="text"){
+					result.innerHTML=fr.result;
+				}	
+			}
+
+		}
+		document.querySelector("#list").addEventListener("click",function(e){
+			var target=e.target;
+			var index=target.getAttribute("index");
+			if(index){
+				dbm.exec({
+				operation:"query",
+				filter:[index],
+				objectStore:"blob",
+				callback:function(data){
+					readFile(data.result[0].blob);
+				}
+			});
+			}
+		},false);
+
+	</script>
+</body>
+</html>
