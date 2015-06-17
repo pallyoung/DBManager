@@ -20,7 +20,7 @@
 		var dbm=new DBM("TEST");
 		dbm.contains("library").then(function(data){
 			if(!data.result){
-				dbm.createObjectStore("library","ISBN",false,[{
+				dbm.createObjectStore("library",{keyPath:"ISBN",autoIncrement:false},[{
 					name:"name",
 					keyPath:"name",
 					optional:{
@@ -55,7 +55,9 @@
 			inputs[1].value="";
 			inputs[2].value="";
 
-			dbm.put("library",[book]).then(function(){
+			dbm.put("library",[{
+				value:book
+			}]).then(function(){
 				showBooks();
 			},function(){});
 		}

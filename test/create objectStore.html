@@ -31,7 +31,7 @@
 				address:["LA","ST"],
 				age:"11"
 			});
-
+			os.put("stirng","string");
 			try{
 				//创建key值相同的所以将会抛出异常
 				os.createIndex("age","age",{unique:false});
@@ -50,8 +50,8 @@
 			}
 
 			//删除创建的os
-			db.deleteObjectStore("User");
-			db.deleteObjectStore("User");
+			//db.deleteObjectStore("User");
+			//db.deleteObjectStore("User");
 
 			try{
 				//在空的os上创建索引会抛出异常
@@ -59,6 +59,9 @@
 			}catch(e){
 				console.log(e.message);
 			}
+
+
+			db.createObjectStore("String").put("hello",undefined);
 			
 		};
 		r.onsuccess=function (e) {
